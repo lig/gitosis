@@ -1,3 +1,5 @@
+.*
+!.gitignore
 *.py[co]
 *.egg-info
 /stage
