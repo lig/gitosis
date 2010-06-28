@@ -1,9 +1,11 @@
+import stat
 import errno
 import os
 import re
 import subprocess
 import sys
 
+from pkg_resources import resource_filename
 from gitosis import util
 
 class GitError(Exception):
@@ -36,14 +38,24 @@ def init(
     if _git is None:
         _git = 'git'
 
+    if template is None:
+        template = resource_filename('gitosis.templates', 'default')
+
+
     util.mkdir(path, 0750)
     args = [
         _git,
         '--git-dir=.',
         'init',
         ]
-    if template is not None:
+        
+    hooks = []
+    if template:
         args.append('--template=%s' % template)
+        template_hooks_dir = os.path.join(template, 'hooks')
+        if os.path.isdir(template_hooks_dir):
+            hooks = os.listdir(template_hooks_dir)
+
     returncode = subprocess.call(
         args=args,
         cwd=path,
@@ -52,6 +64,16 @@ def init(
         )
     if returncode != 0:
         raise GitInitError('exit status %d' % returncode)
+    
+    hooks_dir = os.path.join(path, 'hooks')
+    if not os.path.exists(hooks_dir):
+        hooks_dir = os.path.join(path, '.git', 'hooks')
+    if not os.path.exists(hooks_dir):
+        raise
+    for hook in hooks:
+        os.chmod(
+            os.path.join(hooks_dir, hook),
+            0755)
 
 
 class GitFastImportError(GitError):
@@ -194,3 +216,22 @@ def has_initial_commit(git_dir):
         return True
     else:
         raise GitHasInitialCommitError('Unknown git HEAD: %r' % got)
+
+
+class GitPushMirrorException(GitError):
+    """push --mirror failed"""
+
+def mirror(git_dir, remote):
+    returncode = subprocess.call(
+        args=[
+            'git',
+            '--git-dir=%s' % git_dir,
+            'push',
+            '--mirror',
+            remote,
+            ],
+        cwd=git_dir,
+        close_fds=True
+        )
+    if returncode != 0:
+        raise GitPushMirrorException('exit status %d' % returncode)

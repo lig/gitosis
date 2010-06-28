@@ -1,7 +1,19 @@
 import os, logging
 from ConfigParser import NoSectionError, NoOptionError
+from fnmatch import fnmatch
 
 from gitosis import group
+
+def pathMatchPatterns(path, repos):
+    """
+    Check existence of given path against list of path patterns
+
+    The pattern definition is the as fnmatch.fnmatch.
+    """
+    for repo in repos:
+        if fnmatch(path, repo):
+            return True
+    return False
 
 def haveAccess(config, user, mode, path):
     """
@@ -33,9 +45,13 @@ def haveAccess(config, user, mode, path):
             ))
         path = basename
 
-    for groupname in group.getMembership(config=config, user=user):
+    sections = ['group %s' % item for item in
+                 group.getMembership(config=config, user=user)]
+    sections.insert(0, 'user %s' % user)
+
+    for sectname in sections:
         try:
-            repos = config.get('group %s' % groupname, mode)
+            repos = config.get(sectname, mode)
         except (NoSectionError, NoOptionError):
             repos = []
         else:
@@ -43,7 +59,7 @@ def haveAccess(config, user, mode, path):
 
         mapping = None
 
-        if path in repos:
+        if pathMatchPatterns(path, repos):
             log.debug(
                 'Access ok for %(user)r as %(mode)r on %(path)r'
                 % dict(
@@ -54,7 +70,7 @@ def haveAccess(config, user, mode, path):
             mapping = path
         else:
             try:
-                mapping = config.get('group %s' % groupname,
+                mapping = config.get(sectname,
                                      'map %s %s' % (mode, path))
             except (NoSectionError, NoOptionError):
                 pass
@@ -71,8 +87,7 @@ def haveAccess(config, user, mode, path):
         if mapping is not None:
             prefix = None
             try:
-                prefix = config.get(
-                    'group %s' % groupname, 'repositories')
+                prefix = config.get(sectname, 'repositories')
             except (NoSectionError, NoOptionError):
                 try:
                     prefix = config.get('gitosis', 'repositories')
