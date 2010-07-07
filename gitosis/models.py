@@ -2,28 +2,33 @@ from django.contrib.auth.models import User, Group
 from django.db import models
 
 """
-[group quux]
-members = jdoe wsmith @anothergroup
-writable = foo bar baz/thud
-readonly = xyzzy
+Config sections is instances of the appropriate models.
+Config is constructing by model managers.
 
-## You can use groups just to avoid listing users multiple times. Note
-## no writable= or readonly= lines.
-[group anothergroup]
-members = alice bill
-
-[repo foo]
-## Allow gitweb to show this repository.
-gitweb = yes
-
-## Oneline description of the project, mostly for gitweb.
-description = blah blah
-
-## Owner of this repository. Used in gitweb list of projects.
-owner = John Doe
-
-## Allow git-daemon to publish this repository.
-daemon = yes
+Used sections:
+    gitosis  # site dependent 
+        daemon
+        daemon-if-all
+        gitweb
+        repositories
+        generate-files-in
+        ssh-authorized-keys-path
+    group <name>
+        writable
+        readonly
+        @todo: map support
+        members
+    repo <name>
+        daemon
+        gitweb
+        owner
+        description
+        mirrors
+    user <username>
+        name  # full name
+    mirror <name>
+        repos
+        uri
 """
 
 class GitosisRepo(models.Model):
