@@ -17,3 +17,6 @@
 /build
 /dist
 /python-build-stamp-*
+
+# virtual-env
+/venv
